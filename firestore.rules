@@ -1,0 +1,274 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == 'milesanjola57@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll([
+               'userId', 'title', 'description', 'notes', 'category', 'project',
+               'priority', 'status', 'completed', 'archived', 'startDateEpochMillis',
+               'dueDateEpochMillis', 'scheduledTimeSlot', 'estimatedMinutes', 'actualMinutesSpent',
+               'recurrence', 'reminderOffsetsText', 'locationLabel', 'locationTrigger',
+               'subtasksText', 'tagsText', 'attachmentUri', 'attachmentName',
+               'dependsOnTaskId', 'dependsOnTaskTitle', 'calendarSynced', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'userId', 'title', 'description', 'notes', 'category', 'project',
+               'priority', 'status', 'completed', 'archived', 'startDateEpochMillis',
+               'dueDateEpochMillis', 'scheduledTimeSlot', 'estimatedMinutes', 'actualMinutesSpent',
+               'recurrence', 'reminderOffsetsText', 'locationLabel', 'locationTrigger',
+               'subtasksText', 'tagsText', 'attachmentUri', 'attachmentName',
+               'dependsOnTaskId', 'dependsOnTaskTitle', 'calendarSynced', 'createdAt', 'updatedAt'
+             ]) &&
+             data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.notes is string && data.notes.size() <= 2000 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 60 &&
+             data.project is string && data.project.size() <= 80 &&
+             data.priority is string && data.priority in ['LOW', 'NORMAL', 'HIGH', 'CRITICAL'] &&
+             data.status is string && data.status in ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED', 'POSTPONED'] &&
+             data.completed is bool &&
+             data.archived is bool &&
+             data.startDateEpochMillis is int && data.startDateEpochMillis >= 0 &&
+             data.dueDateEpochMillis is int && data.dueDateEpochMillis >= 0 &&
+             data.scheduledTimeSlot is string && data.scheduledTimeSlot.size() <= 60 &&
+             data.estimatedMinutes is int && data.estimatedMinutes >= 1 && data.estimatedMinutes <= 1440 &&
+             data.actualMinutesSpent is int && data.actualMinutesSpent >= 0 && data.actualMinutesSpent <= 100000 &&
+             data.recurrence is string && data.recurrence in ['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'MONDAYS'] &&
+             data.reminderOffsetsText is string && data.reminderOffsetsText.size() <= 200 &&
+             data.locationLabel is string && data.locationLabel.size() <= 150 &&
+             data.locationTrigger is string && data.locationTrigger in ['NONE', 'ARRIVE', 'LEAVE'] &&
+             data.subtasksText is string && data.subtasksText.size() <= 2000 &&
+             data.tagsText is string && data.tagsText.size() <= 300 &&
+             data.attachmentUri is string && data.attachmentUri.size() <= 500 &&
+             data.attachmentName is string && data.attachmentName.size() <= 150 &&
+             data.dependsOnTaskId is string && data.dependsOnTaskId.size() <= 128 &&
+             data.dependsOnTaskTitle is string && data.dependsOnTaskTitle.size() <= 200 &&
+             data.calendarSynced is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidInboxItem(data) {
+      return data.keys().hasAll(['userId', 'content', 'source', 'processedByAi', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'content', 'source', 'processedByAi', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 2000 &&
+             data.source is string && data.source in ['QUICK_CAPTURE', 'VOICE', 'BRAIN_DUMP', 'EXTERNAL_AI', 'SHARE_INTENT'] &&
+             data.processedByAi is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFocusSession(data) {
+      return data.keys().hasAll(['userId', 'taskId', 'taskTitle', 'durationMinutes', 'sessionType', 'completed', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'taskId', 'taskTitle', 'durationMinutes', 'sessionType', 'completed', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.taskId is string && data.taskId.size() <= 128 &&
+             data.taskTitle is string && data.taskTitle.size() >= 1 && data.taskTitle.size() <= 200 &&
+             data.durationMinutes is int && data.durationMinutes >= 1 && data.durationMinutes <= 240 &&
+             data.sessionType is string && data.sessionType in ['POMODORO', 'DEEP_WORK', 'BREAK'] &&
+             data.completed is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidUserSubscription(data) {
+      return data.keys().hasAll([
+               'userId', 'tier', 'billingPeriod', 'status', 'productId', 'purchaseToken',
+               'verifiedByBackend', 'renewalDateEpochMillis', 'aiRequestsUsedToday',
+               'aiRequestsTotalCount', 'aiQuotaResetEpochMillis', 'lastAiActionLabel',
+               'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'userId', 'tier', 'billingPeriod', 'status', 'productId', 'purchaseToken',
+               'verifiedByBackend', 'renewalDateEpochMillis', 'aiRequestsUsedToday',
+               'aiRequestsTotalCount', 'aiQuotaResetEpochMillis', 'lastAiActionLabel',
+               'createdAt', 'updatedAt'
+             ]) &&
+             data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.tier is string && data.tier in ['FREE', 'PRO', 'ULTRA'] &&
+             data.billingPeriod is string && data.billingPeriod in ['NONE', 'MONTHLY', 'ANNUAL', 'ONE_TIME'] &&
+             data.status is string && data.status in ['ACTIVE', 'GRACE_PERIOD', 'EXPIRED', 'CANCELLED', 'PENDING_VERIFICATION'] &&
+             data.productId is string && data.productId.size() <= 120 &&
+             data.purchaseToken is string && data.purchaseToken.size() <= 500 &&
+             data.verifiedByBackend is bool &&
+             // Client cannot self-grant verifiedByBackend=true for paid tiers unless user is an admin
+             (!data.verifiedByBackend || data.tier == 'FREE' || isAdmin()) &&
+             data.renewalDateEpochMillis is int && data.renewalDateEpochMillis >= 0 &&
+             data.aiRequestsUsedToday is int && data.aiRequestsUsedToday >= 0 && data.aiRequestsUsedToday <= 100000 &&
+             data.aiRequestsTotalCount is int && data.aiRequestsTotalCount >= 0 && data.aiRequestsTotalCount <= 10000000 &&
+             data.aiQuotaResetEpochMillis is int && data.aiQuotaResetEpochMillis >= 0 &&
+             data.lastAiActionLabel is string && data.lastAiActionLabel.size() <= 200 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAiUsageLog(data) {
+      return data.keys().hasAll(['userId', 'actionType', 'promptSummary', 'tierAtRequest', 'createdAt']) &&
+             data.keys().hasOnly(['userId', 'actionType', 'promptSummary', 'tierAtRequest', 'createdAt']) &&
+             data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.actionType is string && data.actionType in ['SCHEDULE_PLAN', 'MORNING_BRIEFING', 'EOD_REVIEW', 'INBOX_BREAKDOWN', 'INSIGHTS'] &&
+             data.promptSummary is string && data.promptSummary.size() >= 1 && data.promptSummary.size() <= 300 &&
+             data.tierAtRequest is string && data.tierAtRequest in ['FREE', 'PRO', 'ULTRA'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidMonetizationConfig(data) {
+      return data.keys().hasAll([
+               'freeAiDailyLimit', 'proAiDailyLimit', 'ultraAiDailyLimit',
+               'proMonthlyPrice', 'proAnnualPrice', 'proLifetimePrice',
+               'ultraMonthlyPrice', 'ultraAnnualPrice',
+               'freeBenefitsSummary', 'proBenefitsSummary', 'ultraBenefitsSummary',
+               'adsEnabledForFreeTier', 'subscriptionsAvailable', 'promoBannerText',
+               'updatedByEmail', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'freeAiDailyLimit', 'proAiDailyLimit', 'ultraAiDailyLimit',
+               'proMonthlyPrice', 'proAnnualPrice', 'proLifetimePrice',
+               'ultraMonthlyPrice', 'ultraAnnualPrice',
+               'freeBenefitsSummary', 'proBenefitsSummary', 'ultraBenefitsSummary',
+               'adsEnabledForFreeTier', 'subscriptionsAvailable', 'promoBannerText',
+               'updatedByEmail', 'createdAt', 'updatedAt'
+             ]) &&
+             data.freeAiDailyLimit is int && data.freeAiDailyLimit >= 1 && data.freeAiDailyLimit <= 1000 &&
+             data.proAiDailyLimit is int && data.proAiDailyLimit >= 1 && data.proAiDailyLimit <= 10000 &&
+             data.ultraAiDailyLimit is int && data.ultraAiDailyLimit >= 1 && data.ultraAiDailyLimit <= 100000 &&
+             data.proMonthlyPrice is string && data.proMonthlyPrice.size() >= 1 && data.proMonthlyPrice.size() <= 40 &&
+             data.proAnnualPrice is string && data.proAnnualPrice.size() >= 1 && data.proAnnualPrice.size() <= 40 &&
+             data.proLifetimePrice is string && data.proLifetimePrice.size() >= 1 && data.proLifetimePrice.size() <= 40 &&
+             data.ultraMonthlyPrice is string && data.ultraMonthlyPrice.size() >= 1 && data.ultraMonthlyPrice.size() <= 40 &&
+             data.ultraAnnualPrice is string && data.ultraAnnualPrice.size() >= 1 && data.ultraAnnualPrice.size() <= 40 &&
+             data.freeBenefitsSummary is string && data.freeBenefitsSummary.size() >= 1 && data.freeBenefitsSummary.size() <= 1000 &&
+             data.proBenefitsSummary is string && data.proBenefitsSummary.size() >= 1 && data.proBenefitsSummary.size() <= 1000 &&
+             data.ultraBenefitsSummary is string && data.ultraBenefitsSummary.size() >= 1 && data.ultraBenefitsSummary.size() <= 1000 &&
+             data.adsEnabledForFreeTier is bool &&
+             data.subscriptionsAvailable is bool &&
+             data.promoBannerText is string && data.promoBannerText.size() <= 300 &&
+             data.updatedByEmail is string && data.updatedByEmail.size() <= 200 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isOwner(adminUid) || isAdmin();
+      allow list, create, update, delete: if false;
+    }
+
+    match /app_config/{configId} {
+      allow get: if isSignedIn() && isValidId(configId);
+      allow list: if false;
+      allow create: if isAdmin() && isValidId(configId) && isValidMonetizationConfig(incoming());
+      allow update: if isAdmin() && isValidId(configId) &&
+                       isValidMonetizationConfig(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'freeAiDailyLimit', 'proAiDailyLimit', 'ultraAiDailyLimit',
+                         'proMonthlyPrice', 'proAnnualPrice', 'proLifetimePrice',
+                         'ultraMonthlyPrice', 'ultraAnnualPrice',
+                         'freeBenefitsSummary', 'proBenefitsSummary', 'ultraBenefitsSummary',
+                         'adsEnabledForFreeTier', 'subscriptionsAvailable', 'promoBannerText',
+                         'updatedByEmail', 'updatedAt'
+                       ]);
+      allow delete: if false;
+    }
+
+    match /users/{userId}/tasks/{taskId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(taskId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(taskId) && isValidTask(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(taskId) &&
+                       isValidTask(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'description', 'notes', 'category', 'project',
+                         'priority', 'status', 'completed', 'archived', 'startDateEpochMillis',
+                         'dueDateEpochMillis', 'scheduledTimeSlot', 'estimatedMinutes', 'actualMinutesSpent',
+                         'recurrence', 'reminderOffsetsText', 'locationLabel', 'locationTrigger',
+                         'subtasksText', 'tagsText', 'attachmentUri', 'attachmentName',
+                         'dependsOnTaskId', 'dependsOnTaskTitle', 'calendarSynced', 'updatedAt'
+                       ]);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(taskId) && existing().userId == request.auth.uid;
+    }
+
+    match /users/{userId}/inbox_items/{itemId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(itemId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(itemId) && isValidInboxItem(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(itemId) &&
+                       isValidInboxItem(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['content', 'source', 'processedByAi', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(itemId) && existing().userId == request.auth.uid;
+    }
+
+    match /users/{userId}/focus_sessions/{sessionId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) && isValidFocusSession(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) &&
+                       isValidFocusSession(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['taskId', 'taskTitle', 'durationMinutes', 'sessionType', 'completed', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(sessionId) && existing().userId == request.auth.uid;
+    }
+
+    match /users/{userId}/subscription/{subId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(subId) && (resource == null || existing().userId == request.auth.uid);
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(subId) && isValidUserSubscription(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidId(subId) &&
+                       isValidUserSubscription(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'tier', 'billingPeriod', 'status', 'productId', 'purchaseToken',
+                         'verifiedByBackend', 'renewalDateEpochMillis', 'aiRequestsUsedToday',
+                         'aiRequestsTotalCount', 'aiQuotaResetEpochMillis', 'lastAiActionLabel',
+                         'updatedAt'
+                       ]);
+      allow delete: if false;
+    }
+
+    match /users/{userId}/ai_usage_logs/{logId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(logId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidId(logId) && isValidAiUsageLog(incoming());
+      allow update, delete: if false;
+    }
+  }
+}

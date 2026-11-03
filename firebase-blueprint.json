@@ -1,0 +1,175 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A user task with scheduling, priority, subtasks, reminders, location, dependencies, and time tracking.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID matching request.auth.uid" },
+        "title": { "type": "string", "description": "Task title (1..200 chars)" },
+        "description": { "type": "string", "description": "Detailed task description (0..2000 chars)" },
+        "notes": { "type": "string", "description": "Additional notes (0..2000 chars)" },
+        "category": { "type": "string", "description": "Task category name (1..60 chars)" },
+        "project": { "type": "string", "description": "Project name (0..80 chars)" },
+        "priority": { "type": "string", "enum": ["LOW", "NORMAL", "HIGH", "CRITICAL"], "description": "Priority level" },
+        "status": { "type": "string", "enum": ["TODO", "IN_PROGRESS", "COMPLETED", "ARCHIVED", "POSTPONED"], "description": "Workflow status" },
+        "completed": { "type": "boolean", "description": "Completion state" },
+        "archived": { "type": "boolean", "description": "Archive state" },
+        "startDateEpochMillis": { "type": "integer", "description": "Start date epoch milliseconds" },
+        "dueDateEpochMillis": { "type": "integer", "description": "Deadline epoch milliseconds" },
+        "scheduledTimeSlot": { "type": "string", "description": "Scheduled time range e.g. 09:00 - 10:30" },
+        "estimatedMinutes": { "type": "integer", "description": "Estimated completion duration in minutes" },
+        "actualMinutesSpent": { "type": "integer", "description": "Actual tracked focus minutes" },
+        "recurrence": { "type": "string", "enum": ["NONE", "DAILY", "WEEKLY", "MONTHLY", "MONDAYS"], "description": "Recurrence schedule" },
+        "reminderOffsetsText": { "type": "string", "description": "Reminder intervals summary" },
+        "locationLabel": { "type": "string", "description": "Location reminder label" },
+        "locationTrigger": { "type": "string", "enum": ["NONE", "ARRIVE", "LEAVE"], "description": "Location trigger mode" },
+        "subtasksText": { "type": "string", "description": "Newline-delimited subtasks checklist" },
+        "tagsText": { "type": "string", "description": "Comma-separated tags" },
+        "attachmentUri": { "type": "string", "description": "Attached file or photo URI" },
+        "attachmentName": { "type": "string", "description": "Attached file or photo display name" },
+        "dependsOnTaskId": { "type": "string", "description": "Optional dependency task ID" },
+        "dependsOnTaskTitle": { "type": "string", "description": "Optional dependency task title" },
+        "calendarSynced": { "type": "boolean", "description": "Whether synced with device calendar" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId", "title", "description", "notes", "category", "project",
+        "priority", "status", "completed", "archived", "startDateEpochMillis",
+        "dueDateEpochMillis", "scheduledTimeSlot", "estimatedMinutes", "actualMinutesSpent",
+        "recurrence", "reminderOffsetsText", "locationLabel", "locationTrigger",
+        "subtasksText", "tagsText", "attachmentUri", "attachmentName",
+        "dependsOnTaskId", "dependsOnTaskTitle", "calendarSynced", "createdAt", "updatedAt"
+      ]
+    },
+    "InboxItem": {
+      "title": "InboxItem",
+      "description": "Smart Inbox / Brain Dump / Voice capture entry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID matching request.auth.uid" },
+        "content": { "type": "string", "description": "Captured text or brain dump content (1..2000 chars)" },
+        "source": { "type": "string", "enum": ["QUICK_CAPTURE", "VOICE", "BRAIN_DUMP", "EXTERNAL_AI", "SHARE_INTENT"], "description": "Capture source" },
+        "processedByAi": { "type": "boolean", "description": "Whether organized into tasks by MCA AI" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": ["userId", "content", "source", "processedByAi", "createdAt", "updatedAt"]
+    },
+    "FocusSession": {
+      "title": "FocusSession",
+      "description": "Pomodoro or deep work focus session log.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID matching request.auth.uid" },
+        "taskId": { "type": "string", "description": "Associated task ID" },
+        "taskTitle": { "type": "string", "description": "Associated task title" },
+        "durationMinutes": { "type": "integer", "description": "Duration in minutes (1..240)" },
+        "sessionType": { "type": "string", "enum": ["POMODORO", "DEEP_WORK", "BREAK"], "description": "Type of focus session" },
+        "completed": { "type": "boolean", "description": "Whether completed" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": ["userId", "taskId", "taskTitle", "durationMinutes", "sessionType", "completed", "createdAt", "updatedAt"]
+    },
+    "UserSubscription": {
+      "title": "UserSubscription",
+      "description": "Synchronized subscription state, Play Billing verification status, and AI usage allowance for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID matching request.auth.uid" },
+        "tier": { "type": "string", "enum": ["FREE", "PRO", "ULTRA"], "description": "Active subscription tier" },
+        "billingPeriod": { "type": "string", "enum": ["NONE", "MONTHLY", "ANNUAL", "ONE_TIME"], "description": "Billing cycle" },
+        "status": { "type": "string", "enum": ["ACTIVE", "GRACE_PERIOD", "EXPIRED", "CANCELLED", "PENDING_VERIFICATION"], "description": "Entitlement status" },
+        "productId": { "type": "string", "description": "Google Play Billing SKU / product ID" },
+        "purchaseToken": { "type": "string", "description": "Google Play purchase token awaiting or holding backend verification" },
+        "verifiedByBackend": { "type": "boolean", "description": "Whether verified by backend Play Developer API / Admin" },
+        "renewalDateEpochMillis": { "type": "integer", "description": "Next billing renewal or expiration epoch millis" },
+        "aiRequestsUsedToday": { "type": "integer", "description": "AI Organiser requests consumed in current reset window" },
+        "aiRequestsTotalCount": { "type": "integer", "description": "Lifetime AI Organiser requests count" },
+        "aiQuotaResetEpochMillis": { "type": "integer", "description": "Epoch millis when the current daily AI allowance resets" },
+        "lastAiActionLabel": { "type": "string", "description": "Summary of most recent AI request" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
+      },
+      "required": [
+        "userId", "tier", "billingPeriod", "status", "productId", "purchaseToken",
+        "verifiedByBackend", "renewalDateEpochMillis", "aiRequestsUsedToday",
+        "aiRequestsTotalCount", "aiQuotaResetEpochMillis", "lastAiActionLabel",
+        "createdAt", "updatedAt"
+      ]
+    },
+    "AiUsageLog": {
+      "title": "AiUsageLog",
+      "description": "Audit log of an AI Organiser request for usage history tracking.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner UID matching request.auth.uid" },
+        "actionType": { "type": "string", "enum": ["SCHEDULE_PLAN", "MORNING_BRIEFING", "EOD_REVIEW", "INBOX_BREAKDOWN", "INSIGHTS"], "description": "Type of AI action" },
+        "promptSummary": { "type": "string", "description": "Short summary of prompt (1..300 chars)" },
+        "tierAtRequest": { "type": "string", "enum": ["FREE", "PRO", "ULTRA"], "description": "User tier when request was made" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" }
+      },
+      "required": ["userId", "actionType", "promptSummary", "tierAtRequest", "createdAt"]
+    },
+    "MonetizationConfig": {
+      "title": "MonetizationConfig",
+      "description": "Backend-configurable subscription benefits, prices, AI usage limits, ad toggles, and promotional offers managed by admins.",
+      "type": "object",
+      "properties": {
+        "freeAiDailyLimit": { "type": "integer", "description": "Daily AI Organiser limit for MCA FREE" },
+        "proAiDailyLimit": { "type": "integer", "description": "Daily AI Organiser limit for MCA PRO" },
+        "ultraAiDailyLimit": { "type": "integer", "description": "Daily AI Organiser limit for MCA ULTRA" },
+        "proMonthlyPrice": { "type": "string", "description": "Display price for MCA PRO Monthly" },
+        "proAnnualPrice": { "type": "string", "description": "Display price for MCA PRO Annual" },
+        "proLifetimePrice": { "type": "string", "description": "Display price for MCA PRO One-Time Lifetime" },
+        "ultraMonthlyPrice": { "type": "string", "description": "Display price for MCA ULTRA Monthly" },
+        "ultraAnnualPrice": { "type": "string", "description": "Display price for MCA ULTRA Annual" },
+        "freeBenefitsSummary": { "type": "string", "description": "Configurable benefits summary for MCA FREE" },
+        "proBenefitsSummary": { "type": "string", "description": "Configurable benefits summary for MCA PRO" },
+        "ultraBenefitsSummary": { "type": "string", "description": "Configurable benefits summary for MCA ULTRA" },
+        "adsEnabledForFreeTier": { "type": "boolean", "description": "Whether non-intrusive AdMob test banners/native ads are enabled for Free tier" },
+        "subscriptionsAvailable": { "type": "boolean", "description": "Whether new subscription upgrades are currently open" },
+        "promoBannerText": { "type": "string", "description": "Active promotional offer banner text" },
+        "updatedByEmail": { "type": "string", "description": "Admin email that last updated configuration" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp" }
+      },
+      "required": [
+        "freeAiDailyLimit", "proAiDailyLimit", "ultraAiDailyLimit",
+        "proMonthlyPrice", "proAnnualPrice", "proLifetimePrice",
+        "ultraMonthlyPrice", "ultraAnnualPrice",
+        "freeBenefitsSummary", "proBenefitsSummary", "ultraBenefitsSummary",
+        "adsEnabledForFreeTier", "subscriptionsAvailable", "promoBannerText",
+        "updatedByEmail", "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Per-user tasks collection isolated by userId."
+    },
+    "/users/{userId}/inbox_items/{itemId}": {
+      "schema": { "$ref": "#/entities/InboxItem" },
+      "description": "Per-user Smart Inbox and Brain Dump entries isolated by userId."
+    },
+    "/users/{userId}/focus_sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/FocusSession" },
+      "description": "Per-user Focus Mode session logs isolated by userId."
+    },
+    "/users/{userId}/subscription/{subId}": {
+      "schema": { "$ref": "#/entities/UserSubscription" },
+      "description": "Per-user subscription state and AI quota document."
+    },
+    "/users/{userId}/ai_usage_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AiUsageLog" },
+      "description": "Per-user AI Organiser request history."
+    },
+    "/app_config/{configId}": {
+      "schema": { "$ref": "#/entities/MonetizationConfig" },
+      "description": "Global monetization and entitlement configuration readable by signed-in users and writable strictly by verified admins."
+    }
+  }
+}
